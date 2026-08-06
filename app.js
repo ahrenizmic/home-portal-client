@@ -3,6 +3,11 @@ const DATA_BASE = "https://ahrenizmic.github.io/home-portal-data";
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 
+// "Сегодня" — реальная дата устройства в формате YYYY-MM-DD.
+// toLocaleDateString("sv-SE") даёт ISO-формат в ЛОКАЛЬНОЙ зоне.
+// НЕ используем toISOString() — он вернул бы дату в UTC и мог сдвинуть день.
+const TODAY = new Date().toLocaleDateString("sv-SE");
+
 // ── Вывод ключа: зеркально plugin.deriveKey ──
 async function deriveKey(password, saltBytes) {
   const keyMaterial = await crypto.subtle.importKey(
@@ -35,10 +40,6 @@ async function decryptPacked(buffer, key) {
   );
   return dec.decode(plainBytes);
 }
-
-// ── "Сегодня" в формате YYYY-MM-DD ──
-// Пока зафиксировано для теста. Позже заменим на реальную дату (см. коммент внизу).
-const TODAY = "2026-08-04";
 
 // ── Собрать задачи "due <= сегодня, todo" из всех проектов ──
 function collectDueTasks(bundle, today) {
@@ -87,6 +88,7 @@ async function loadAndShow(password) {
   list.innerHTML = "";
   status.textContent = "Загрузка...";
   status.className = "";
+  document.getElementById("today").textContent = `Сегодня: ${TODAY}`;
 
   try {
     // --- расшифровка (без изменений, доказано) ---
