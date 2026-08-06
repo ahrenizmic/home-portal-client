@@ -36,34 +36,71 @@ async function decryptPacked(buffer, key) {
   return dec.decode(plainBytes);
 }
 
+// ── "Сегодня" в формате YYYY-MM-DD ──
+// Пока зафиксировано для теста. Позже заменим на реальную дату (см. коммент внизу).
+const TODAY = "2026-08-04";
+
+// ── Собрать задачи "due <= сегодня, todo" из всех проектов ──
+function collectDueTasks(bundle, today) {
+  const result = [];
+  for (const entity of bundle.entities) {
+    if (entity.type !== "project") continue;        // события пропускаем
+    for (const task of entity.tasks) {
+      if (task.status !== "todo") continue;         // только невыполненные
+      if (task.due === null) continue;              // без срока — не показываем
+      if (task.due > today) continue;               // будущее — не показываем
+      result.push({
+        text: task.text,
+        due: task.due,
+        priority: task.priority,
+        project: entity.title,
+      });
+    }
+  }
+  // сортировка по due (строки ISO): просрочка всплывает наверх
+  result.sort((a, b) => (a.due < b.due ? -1 : a.due > b.due ? 1 : 0));
+  return result;
+}
+
+// ── Отрисовать список задач ──
+function renderTasks(tasks) {
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+  if (tasks.length === 0) {
+    list.innerHTML = "<p>Нет задач на сегодня 🎉</p>";
+    return;
+  }
+  for (const t of tasks) {
+    const div = document.createElement("div");
+    div.className = "task";
+    div.innerHTML =
+      `<div class="task-due">${t.due}</div>` +
+      `<div class="task-text">${t.text}</div>` +
+      `<div class="task-project">${t.project}</div>`;
+    list.appendChild(div);
+  }
+}
+
 async function loadAndShow(password) {
   const status = document.getElementById("status");
-  const raw = document.getElementById("raw");
-  raw.textContent = "";
+  const list = document.getElementById("list");
+  list.innerHTML = "";
   status.textContent = "Загрузка...";
   status.className = "";
 
   try {
-    // 1. keyparams (открытый JSON — парсим сразу)
+    // --- расшифровка (без изменений, доказано) ---
     const keyparams = await (await fetch(`${DATA_BASE}/keyparams.json`)).json();
-
-    // 2. data (зашифрованный бинарь — сначала arrayBuffer, потом расшифровка)
     const dataBuffer = await (await fetch(`${DATA_BASE}/data`)).arrayBuffer();
-
-    // 3. Ключ из пароля и соли
     const salt = base64ToBytes(keyparams.salt);
     const key = await deriveKey(password, salt);
-
-    // 4. Расшифровать data
     const bundleText = await decryptPacked(dataBuffer, key);
     const bundle = JSON.parse(bundleText);
 
-    // 5. ДИАГНОСТИКА: показать сырой bundle целиком
-    status.textContent =
-      `formatVersion: ${bundle.formatVersion}, ` +
-      `сущностей: ${bundle.entities.length}, ` +
-      `связей: ${bundle.links.length}`;
-    raw.textContent = JSON.stringify(bundle, null, 2);
+    // --- НОВОЕ: фильтр и отрисовка ---
+    const tasks = collectDueTasks(bundle, TODAY);
+    status.textContent = `Задач на сегодня и просроченных: ${tasks.length}`;
+    renderTasks(tasks);
   } catch (err) {
     status.textContent = "Ошибка: неверный пароль или данные повреждены";
     status.className = "error";
