@@ -30,6 +30,14 @@ function base64ToBytes(b64) {
   return bytes;
 }
 
+// ArrayBuffer/Uint8Array → base64-строка (для хранения в localStorage)
+function bytesToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+
 // ── Расшифровать пакет [iv(12)][ciphertext] данным ключом ──
 async function decryptPacked(buffer, key) {
   const packed = new Uint8Array(buffer);
@@ -213,10 +221,38 @@ async function loadAndShow(password) {
     const manifest = JSON.parse(manifestText);
     console.log("[manifest]", manifest);                  // проверка Б1 — временный зонд
 
-    // data — как раньше
-    const dataBuffer = await (await fetch(`${DATA_BASE}/data`)).arrayBuffer();
-    const bundleText = await decryptPacked(dataBuffer, key);
-    const bundle = JSON.parse(bundleText);
+    // ── Б2: data из кэша или из сети, по publishId ──
+    const savedId = localStorage.getItem("hp_publishId");
+    const savedData = localStorage.getItem("hp_data");
+    let dataBuffer;
+
+    if (manifest.publishId === savedId && savedData) {
+      // id совпал И кэш есть → берём из кэша, сеть НЕ трогаем
+      console.log("[cache] publishId совпал — data из кэша, сеть не качаем");
+      dataBuffer = base64ToBytes(savedData).buffer;
+    } else {
+      // изменилось / первый раз / кэша нет → качаем из сети
+      console.log("[cache] качаем data из сети");
+      dataBuffer = await (await fetch(`${DATA_BASE}/data`)).arrayBuffer();
+      // сохраняем: СНАЧАЛА data, ПОТОМ id (печать актуальности — последней)
+      localStorage.setItem("hp_data", bytesToBase64(dataBuffer));
+      localStorage.setItem("hp_publishId", manifest.publishId);
+    }
+
+    // расшифровка — общая для обоих путей
+    let bundle;
+    try {
+      const bundleText = await decryptPacked(dataBuffer, key);
+      bundle = JSON.parse(bundleText);
+    } catch (e) {
+      // Ловушка №2: кэш подвёл (битый) → откат в сеть
+      console.log("[cache] расшифровка из кэша не удалась — качаем из сети");
+      dataBuffer = await (await fetch(`${DATA_BASE}/data`)).arrayBuffer();
+      localStorage.setItem("hp_data", bytesToBase64(dataBuffer));
+      localStorage.setItem("hp_publishId", manifest.publishId);
+      const bundleText = await decryptPacked(dataBuffer, key);
+      bundle = JSON.parse(bundleText);
+    }
 
     // --- НОВОЕ: фильтр и отрисовка ---
     const tasks = collectDueTasks(bundle, TODAY);
