@@ -45,20 +45,20 @@ async function decryptPacked(buffer, key) {
 function collectDueTasks(bundle, today) {
   const result = [];
   for (const entity of bundle.entities) {
-    if (entity.type !== "project") continue;        // события пропускаем
+    if (entity.type !== "project") continue;
     for (const task of entity.tasks) {
-      if (task.status !== "todo") continue;         // только невыполненные
-      if (task.due === null) continue;              // без срока — не показываем
-      if (task.due > today) continue;               // будущее — не показываем
+      if (task.status !== "todo") continue;
+      if (task.due === null) continue;
+      if (task.due > today) continue;              // будущие пока не берём
       result.push({
         text: task.text,
         due: task.due,
         priority: task.priority,
         project: entity.title,
+        overdue: task.due < today,                 // ← ЕДИНСТВЕННОЕ различение
       });
     }
   }
-  // сортировка по due (строки ISO): просрочка всплывает наверх
   result.sort((a, b) => (a.due < b.due ? -1 : a.due > b.due ? 1 : 0));
   return result;
 }
@@ -67,18 +67,43 @@ function collectDueTasks(bundle, today) {
 function renderTasks(tasks) {
   const list = document.getElementById("list");
   list.innerHTML = "";
+
+  const overdue = tasks.filter(t => t.overdue);
+  const todayTasks = tasks.filter(t => !t.overdue);
+
+  // счётчик — твоя формулировка
+  document.getElementById("status").textContent =
+    `На сегодня: ${todayTasks.length} · Просрочено: ${overdue.length}`;
+
   if (tasks.length === 0) {
-    list.innerHTML = "<p>Нет задач на сегодня 🎉</p>";
+    list.innerHTML = "<p>Нет задач 🎉</p>";
     return;
   }
+
+  renderGroup(list, "Просрочено", overdue, "overdue");
+  renderGroup(list, "На сегодня", todayTasks, "today");
+}
+
+function renderGroup(container, title, tasks, cls) {
+  if (tasks.length === 0) return;                  // пустую группу не рисуем
+  const header = document.createElement("h2");
+  header.textContent = title;
+  header.className = "group-header";
+  container.appendChild(header);
   for (const t of tasks) {
     const div = document.createElement("div");
-    div.className = "task";
-    div.innerHTML =
-      `<div class="task-due">${t.due}</div>` +
-      `<div class="task-text">${t.text}</div>` +
-      `<div class="task-project">${t.project}</div>`;
-    list.appendChild(div);
+    div.className = `task ${cls}`;
+    const dueEl = document.createElement("div");
+    dueEl.className = "task-due";
+    dueEl.textContent = t.due;
+    const textEl = document.createElement("div");
+    textEl.className = "task-text";
+    textEl.textContent = t.text;                   // ← textContent, не innerHTML
+    const projEl = document.createElement("div");
+    projEl.className = "task-project";
+    projEl.textContent = t.project;
+    div.append(dueEl, textEl, projEl);
+    container.appendChild(div);
   }
 }
 
