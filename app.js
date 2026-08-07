@@ -203,11 +203,18 @@ async function loadAndShow(password) {
   document.getElementById("today").textContent = `Сегодня: ${TODAY}`;
 
   try {
-    // --- расшифровка (без изменений, доказано) ---
     const keyparams = await (await fetch(`${DATA_BASE}/keyparams.json`)).json();
-    const dataBuffer = await (await fetch(`${DATA_BASE}/data`)).arrayBuffer();
     const salt = base64ToBytes(keyparams.salt);
-    const key = await deriveKey(password, salt);
+    const key = await deriveKey(password, salt);          // ОДИН вывод ключа
+
+    // ── Б1: читаем manifest тем же ключом ──
+    const manifestBuffer = await (await fetch(`${DATA_BASE}/manifest`)).arrayBuffer();
+    const manifestText = await decryptPacked(manifestBuffer, key);
+    const manifest = JSON.parse(manifestText);
+    console.log("[manifest]", manifest);                  // проверка Б1 — временный зонд
+
+    // data — как раньше
+    const dataBuffer = await (await fetch(`${DATA_BASE}/data`)).arrayBuffer();
     const bundleText = await decryptPacked(dataBuffer, key);
     const bundle = JSON.parse(bundleText);
 
