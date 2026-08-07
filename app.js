@@ -84,6 +84,14 @@ function addDays(isoDate, days) {
   return `${yy}-${mm}-${dd}`;
 }
 
+// Дата "YYYY-MM-DD" → "20 августа 2026". Год показываем всегда.
+// Парсим числами (new Date(y, m-1, d)) — локально, без UTC-ловушки.
+function formatHuman(isoDate) {
+  const [y, m, d] = isoDate.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  return dt.toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
+}
+
 // ── Отрисовать список задач ──
 function renderTasks(tasks) {
   const list = document.getElementById("list");
@@ -101,13 +109,13 @@ function renderTasks(tasks) {
     return;
   }
 
-  renderGroup(list, "Просрочено", overdue, "overdue");
-  renderGroup(list, "На сегодня", todayTasks, "today");
-  renderGroup(list, "В ближайшие 2 недели", future, "future");
+  renderGroup(list, "Просрочено", overdue, "overdue", true);
+  renderGroup(list, "На сегодня", todayTasks, "today", false);   // ← даты НЕ показываем
+  renderGroup(list, "В ближайшие 2 недели", future, "future", true);
 }
 
-function renderGroup(container, title, tasks, cls) {
-  if (tasks.length === 0) return;                  // пустую группу не рисуем
+function renderGroup(container, title, tasks, cls, showDate) {
+  if (tasks.length === 0) return;
   const header = document.createElement("h2");
   header.textContent = title;
   header.className = "group-header";
@@ -115,16 +123,21 @@ function renderGroup(container, title, tasks, cls) {
   for (const t of tasks) {
     const div = document.createElement("div");
     div.className = `task ${cls}`;
-    const dueEl = document.createElement("div");
-    dueEl.className = "task-due";
-    dueEl.textContent = t.due;
+
+    if (showDate) {                              // ← дату рисуем только если просили
+      const dueEl = document.createElement("div");
+      dueEl.className = "task-due";
+      dueEl.textContent = formatHuman(t.due);    // ← человеческий формат
+      div.appendChild(dueEl);
+    }
+
     const textEl = document.createElement("div");
     textEl.className = "task-text";
-    textEl.textContent = t.text;                   // ← textContent, не innerHTML
+    textEl.textContent = t.text;
     const projEl = document.createElement("div");
     projEl.className = "task-project";
     projEl.textContent = t.project;
-    div.append(dueEl, textEl, projEl);
+    div.append(textEl, projEl);                  // дата уже добавлена выше (если была)
     container.appendChild(div);
   }
 }
