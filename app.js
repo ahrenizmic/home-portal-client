@@ -92,6 +92,58 @@ function formatHuman(isoDate) {
   return dt.toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
 }
 
+function renderFutureGrouped(container, tasks) {
+  if (tasks.length === 0) return;
+
+  // заголовок группы
+  const header = document.createElement("h2");
+  header.textContent = "В ближайшие 2 недели";
+  header.className = "group-header";
+  container.appendChild(header);
+
+  // сгруппировать задачи по due (tasks уже отсортированы по due в collectDueTasks)
+  const byDate = new Map();                       // "2026-08-20" -> [задачи]
+  for (const t of tasks) {
+    if (!byDate.has(t.due)) byDate.set(t.due, []);
+    byDate.get(t.due).push(t);
+  }
+
+  // для каждой даты — сворачиваемая подгруппа
+  for (const [due, dateTasks] of byDate) {
+    // заголовок подгруппы (кликабельный)
+    const sub = document.createElement("div");
+    sub.className = "subgroup-header collapsed";   // по умолчанию свёрнуто
+    sub.textContent = `▸ ${formatHuman(due)} (${dateTasks.length})`;
+
+    // контейнер с задачами этой даты (скрыт по умолчанию)
+    const body = document.createElement("div");
+    body.className = "subgroup-body";
+    body.style.display = "none";                   // свёрнуто
+    for (const t of dateTasks) {
+      const div = document.createElement("div");
+      div.className = "task future";
+      const textEl = document.createElement("div");
+      textEl.className = "task-text";
+      textEl.textContent = t.text;
+      const projEl = document.createElement("div");
+      projEl.className = "task-project";
+      projEl.textContent = t.project;
+      div.append(textEl, projEl);                  // дату НЕ дублируем — она в заголовке подгруппы
+      body.appendChild(div);
+    }
+
+    // клик по заголовку — свернуть/развернуть
+    sub.addEventListener("click", () => {
+      const isCollapsed = body.style.display === "none";
+      body.style.display = isCollapsed ? "block" : "none";
+      sub.textContent = `${isCollapsed ? "▾" : "▸"} ${formatHuman(due)} (${dateTasks.length})`;
+    });
+
+    container.appendChild(sub);
+    container.appendChild(body);
+  }
+}
+
 // ── Отрисовать список задач ──
 function renderTasks(tasks) {
   const list = document.getElementById("list");
@@ -110,8 +162,8 @@ function renderTasks(tasks) {
   }
 
   renderGroup(list, "Просрочено", overdue, "overdue", true);
-  renderGroup(list, "На сегодня", todayTasks, "today", false);   // ← даты НЕ показываем
-  renderGroup(list, "В ближайшие 2 недели", future, "future", true);
+  renderGroup(list, "На сегодня", todayTasks, "today", false);
+  renderFutureGrouped(list, future);              // ← вместо renderGroup для будущего
 }
 
 function renderGroup(container, title, tasks, cls, showDate) {
