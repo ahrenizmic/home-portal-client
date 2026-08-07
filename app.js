@@ -243,7 +243,6 @@ async function loadAndShow(password) {
       bundle = JSON.parse(bundleText);
     } catch (e) {
       // Ловушка №2: кэш подвёл (битый) → откат в сеть
-      console.log("[cache] расшифровка из кэша не удалась — качаем из сети");
       dataBuffer = await (await fetch(`${DATA_BASE}/data`)).arrayBuffer();
       localStorage.setItem("hp_data", bytesToBase64(dataBuffer));
       localStorage.setItem("hp_publishId", manifest.publishId);
