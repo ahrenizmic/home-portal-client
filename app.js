@@ -43,19 +43,27 @@ async function decryptPacked(buffer, key) {
 
 // ── Собрать задачи "due <= сегодня, todo" из всех проектов ──
 function collectDueTasks(bundle, today) {
+  const horizon = addDays(today, 14);              // граница "ближайших 2 недель" включительно
   const result = [];
   for (const entity of bundle.entities) {
     if (entity.type !== "project") continue;
     for (const task of entity.tasks) {
       if (task.status !== "todo") continue;
       if (task.due === null) continue;
-      if (task.due > today) continue;              // будущие пока не берём
+      if (task.due > horizon) continue;            // дальше 2 недель — не берём
+
+      // класс задачи: overdue / today / future
+      let group;
+      if (task.due < today) group = "overdue";
+      else if (task.due === today) group = "today";
+      else group = "future";                       // today < due <= horizon
+
       result.push({
         text: task.text,
         due: task.due,
         priority: task.priority,
         project: entity.title,
-        overdue: task.due < today,                 // ← ЕДИНСТВЕННОЕ различение
+        group,
       });
     }
   }
@@ -63,17 +71,30 @@ function collectDueTasks(bundle, today) {
   return result;
 }
 
+// Прибавить N дней к дате "YYYY-MM-DD", вернуть тоже "YYYY-MM-DD".
+// Парсим числами (локальная зона), не через new Date(строка) — тот трактует дефисы как UTC.
+function addDays(isoDate, days) {
+  const [y, m, d] = isoDate.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);        // локальная полночь, m-1 т.к. месяцы 0-11
+  dt.setDate(dt.getDate() + days);         // setDate корректно переносит через границы месяцев
+  // обратно в YYYY-MM-DD (локально), padStart для ведущих нулей
+  const yy = dt.getFullYear();
+  const mm = String(dt.getMonth() + 1).padStart(2, "0");
+  const dd = String(dt.getDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
+}
+
 // ── Отрисовать список задач ──
 function renderTasks(tasks) {
   const list = document.getElementById("list");
   list.innerHTML = "";
 
-  const overdue = tasks.filter(t => t.overdue);
-  const todayTasks = tasks.filter(t => !t.overdue);
+  const overdue = tasks.filter(t => t.group === "overdue");
+  const todayTasks = tasks.filter(t => t.group === "today");
+  const future = tasks.filter(t => t.group === "future");
 
-  // счётчик — твоя формулировка
   document.getElementById("status").textContent =
-    `На сегодня: ${todayTasks.length} · Просрочено: ${overdue.length}`;
+    `Просрочено: ${overdue.length} · На сегодня: ${todayTasks.length} · Ближайшие 2 недели: ${future.length}`;
 
   if (tasks.length === 0) {
     list.innerHTML = "<p>Нет задач 🎉</p>";
@@ -82,6 +103,7 @@ function renderTasks(tasks) {
 
   renderGroup(list, "Просрочено", overdue, "overdue");
   renderGroup(list, "На сегодня", todayTasks, "today");
+  renderGroup(list, "В ближайшие 2 недели", future, "future");
 }
 
 function renderGroup(container, title, tasks, cls) {
