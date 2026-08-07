@@ -219,7 +219,6 @@ async function loadAndShow(password) {
     const manifestBuffer = await (await fetch(`${DATA_BASE}/manifest`)).arrayBuffer();
     const manifestText = await decryptPacked(manifestBuffer, key);
     const manifest = JSON.parse(manifestText);
-    console.log("[manifest]", manifest);                  // проверка Б1 — временный зонд
 
     // ── Б2: data из кэша или из сети, по publishId ──
     const savedId = localStorage.getItem("hp_publishId");
@@ -228,11 +227,9 @@ async function loadAndShow(password) {
 
     if (manifest.publishId === savedId && savedData) {
       // id совпал И кэш есть → берём из кэша, сеть НЕ трогаем
-      console.log("[cache] publishId совпал — data из кэша, сеть не качаем");
       dataBuffer = base64ToBytes(savedData).buffer;
     } else {
       // изменилось / первый раз / кэша нет → качаем из сети
-      console.log("[cache] качаем data из сети");
       dataBuffer = await (await fetch(`${DATA_BASE}/data`)).arrayBuffer();
       // сохраняем: СНАЧАЛА data, ПОТОМ id (печать актуальности — последней)
       localStorage.setItem("hp_data", bytesToBase64(dataBuffer));
