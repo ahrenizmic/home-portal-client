@@ -275,6 +275,7 @@ async function loadAndShow(password) {
     const tasks = collectDueTasks(bundle, TODAY);
     status.textContent = `Задач на сегодня и просроченных: ${tasks.length}`;
     renderTasks(tasks);
+    document.getElementById("app").style.display = "block";
   } catch (err) {
     status.textContent = "Ошибка: неверный пароль или данные повреждены";
     status.className = "error";
