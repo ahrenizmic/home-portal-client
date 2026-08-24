@@ -7,6 +7,12 @@
     <style>
         body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 0 16px; }
         input, button { padding: 8px; font-size: 16px; }
+        #tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+        .tab {
+          padding: 8px 16px; border: none; cursor: pointer;
+          background: #ecf0f1; border-radius: 6px; font-size: 15px;
+        }
+        .tab.active { background: #2980b9; color: white; }
         .group-header { font-size: 14px; text-transform: uppercase; color: #555; margin: 20px 0 8px; }
         .task.overdue { border-left: 4px solid #c0392b; }
         .task.today { border-left: 4px solid #27ae60; }
@@ -25,8 +31,24 @@
 <p id="today"></p>
 <input type="password" id="password" placeholder="Пароль" value="test-password">
 <button id="loadBtn">Загрузить</button>
-<p id="status"></p>
-<div id="list"></div>
+<div id="app">
+    <!-- вкладки переключения экранов -->
+    <div id="tabs">
+        <button id="tab-tasks" class="tab active">Задачи</button>
+        <button id="tab-calendar" class="tab">Календарь</button>
+    </div>
+
+    <!-- экран задач (по умолчанию видим) -->
+    <div id="screen-tasks" class="screen">
+        <div id="status"></div>
+        <div id="list"></div>
+    </div>
+
+    <!-- экран календаря (по умолчанию скрыт, пока заглушка) -->
+    <div id="screen-calendar" class="screen" style="display: none;">
+        <p>Здесь будет календарь 📅</p>
+    </div>
+</div>
 <script type="module" src="app.js"></script>
 </body>
 </html>

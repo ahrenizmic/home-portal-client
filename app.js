@@ -49,6 +49,27 @@ async function decryptPacked(buffer, key) {
   return dec.decode(plainBytes);
 }
 
+function setupTabs() {
+  const tabTasks = document.getElementById("tab-tasks");
+  const tabCalendar = document.getElementById("tab-calendar");
+  const screenTasks = document.getElementById("screen-tasks");
+  const screenCalendar = document.getElementById("screen-calendar");
+
+  tabTasks.addEventListener("click", () => {
+    screenTasks.style.display = "block";
+    screenCalendar.style.display = "none";
+    tabTasks.classList.add("active");
+    tabCalendar.classList.remove("active");
+  });
+
+  tabCalendar.addEventListener("click", () => {
+    screenTasks.style.display = "none";
+    screenCalendar.style.display = "block";
+    tabCalendar.classList.add("active");
+    tabTasks.classList.remove("active");
+  });
+}
+
 // ── Собрать задачи "due <= сегодня, todo" из всех проектов ──
 function collectDueTasks(bundle, today) {
   const horizon = addDays(today, 14);              // граница "ближайших 2 недель" включительно
@@ -260,6 +281,8 @@ async function loadAndShow(password) {
     console.error(err);
   }
 }
+
+setupTabs();
 
 document.getElementById("loadBtn").addEventListener("click", () => {
   loadAndShow(document.getElementById("password").value);
