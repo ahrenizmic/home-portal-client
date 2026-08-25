@@ -8,6 +8,8 @@ const dec = new TextDecoder();
 // НЕ используем toISOString() — он вернул бы дату в UTC и мог сдвинуть день.
 const TODAY = new Date().toLocaleDateString("sv-SE");
 
+let currentBundle = null;              // текущие данные, для календаря
+
 // ── Вывод ключа: зеркально plugin.deriveKey ──
 async function deriveKey(password, saltBytes) {
   const keyMaterial = await crypto.subtle.importKey(
@@ -122,6 +124,27 @@ function formatHuman(isoDate) {
   return dt.toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
 }
 
+// Собрать allDay-события, попадающие в указанный месяц (year, month 0-11).
+// Возвращает Map: число дня → [заголовки событий]
+function collectAllDayEvents(bundle, year, month) {
+  const byDay = new Map();
+  if (!bundle) return byDay;
+  for (const entity of bundle.entities) {
+    if (entity.type !== "event") continue;
+    if (!entity.event || entity.event.allDay !== true) continue;   // только allDay
+    const start = entity.event.start;                              // "2025-08-04"
+    if (!start) continue;
+    // парсим строкой (без UTC!), сверяем год+месяц
+    const [ey, em, ed] = start.split("-").map(Number);            // em: 1-12
+    if (ey !== year) continue;
+    if (em - 1 !== month) continue;                                // em-1 → 0-11
+    // Ш3: recurrence НЕ разворачиваем — только по start
+    if (!byDay.has(ed)) byDay.set(ed, []);
+    byDay.get(ed).push(entity.title);                              // несколько в клетку
+  }
+  return byDay;
+}
+
 function renderFutureGrouped(container, tasks) {
   if (tasks.length === 0) return;
 
@@ -225,6 +248,7 @@ function renderGroup(container, title, tasks, cls, showDate) {
 }
 
 function renderCalendar() {
+  if (!currentBundle) return;
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth();               // 0-11
@@ -255,6 +279,8 @@ function renderCalendar() {
   let firstDay = new Date(year, month, 1).getDay();             // 0=вс
   firstDay = (firstDay === 0) ? 6 : firstDay - 1;               // теперь 0=пн..6=вс
 
+  const eventsByDay = collectAllDayEvents(currentBundle, year, month);
+
   // пустые клетки в начале
   for (let i = 0; i < firstDay; i++) {
     const cell = document.createElement("div");
@@ -266,8 +292,25 @@ function renderCalendar() {
   for (let day = 1; day <= daysInMonth; day++) {
     const cell = document.createElement("div");
     cell.className = "cal-cell";
-    if (day === todayDate) cell.classList.add("today");          // подсветка сегодня
-    cell.textContent = day;
+    if (day === todayDate) cell.classList.add("today");
+
+    // число дня
+    const num = document.createElement("div");
+    num.className = "cal-daynum";
+    num.textContent = day;
+    cell.appendChild(num);
+
+    // события этого дня (если есть)
+    const events = eventsByDay.get(day);
+    if (events) {
+      for (const title of events) {
+        const ev = document.createElement("div");
+        ev.className = "cal-event";
+        ev.textContent = title;
+        cell.appendChild(ev);
+      }
+    }
+
     grid.appendChild(cell);
   }
 }
@@ -311,6 +354,7 @@ async function loadAndShow(password) {
     try {
       const bundleText = await decryptPacked(dataBuffer, key);
       bundle = JSON.parse(bundleText);
+      currentBundle = bundle;            // ← сохранить для календаря
     } catch (e) {
       // Ловушка №2: кэш подвёл (битый) → откат в сеть
       dataBuffer = await (await fetch(`${DATA_BASE}/data`)).arrayBuffer();
@@ -320,7 +364,7 @@ async function loadAndShow(password) {
       bundle = JSON.parse(bundleText);
     }
 
-    // --- НОВОЕ: фильтр и отрисовка ---
+    currentBundle = bundle;            // ← сохранить для календаря
     const tasks = collectDueTasks(bundle, TODAY);
     status.textContent = `Задач на сегодня и просроченных: ${tasks.length}`;
     renderTasks(tasks);
