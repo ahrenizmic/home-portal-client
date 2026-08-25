@@ -130,11 +130,17 @@ function collectEvents(bundle, year, month) {
   const byDay = new Map();
   if (!bundle) return byDay;
 
+  console.log("СОБЫТИЙ В ДАННЫХ:",
+    bundle.entities.filter(e => e.type === "event").length);   // ← зонд 1
+
   for (const entity of bundle.entities) {
     if (entity.type !== "event") continue;
     if (!entity.event) continue;
     const ev = entity.event;
     if (!ev.start) continue;
+
+    console.log("ОБРАБАТЫВАЮ СОБЫТИЕ:", entity.title,
+      "allDay=", ev.allDay, "start=", ev.start);               // ← зонд 2
 
     let day, time;
 
@@ -154,8 +160,10 @@ function collectEvents(bundle, year, month) {
     }
 
     if (!byDay.has(day)) byDay.set(day, []);
+    console.log("  → кладу в день", day, "time=", time, "title=", entity.title); // ← зонд 3
     byDay.get(day).push({ time, title: entity.title });
   }
+  console.log("ИТОГО МАП:", byDay);                            // ← зонд 4
   return byDay;
 }
 
