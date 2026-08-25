@@ -124,23 +124,37 @@ function formatHuman(isoDate) {
   return dt.toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
 }
 
-// Собрать allDay-события, попадающие в указанный месяц (year, month 0-11).
-// Возвращает Map: число дня → [заголовки событий]
-function collectAllDayEvents(bundle, year, month) {
+// Собрать события (allDay + timed), попадающие в месяц (year, month 0-11).
+// Возвращает Map: локальный день → [{time, title}], time=null для allDay.
+function collectEvents(bundle, year, month) {
   const byDay = new Map();
   if (!bundle) return byDay;
+
   for (const entity of bundle.entities) {
     if (entity.type !== "event") continue;
-    if (!entity.event || entity.event.allDay !== true) continue;   // только allDay
-    const start = entity.event.start;                              // "2025-08-04"
-    if (!start) continue;
-    // парсим строкой (без UTC!), сверяем год+месяц
-    const [ey, em, ed] = start.split("-").map(Number);            // em: 1-12
-    if (ey !== year) continue;
-    if (em - 1 !== month) continue;                                // em-1 → 0-11
-    // Ш3: recurrence НЕ разворачиваем — только по start
-    if (!byDay.has(ed)) byDay.set(ed, []);
-    byDay.get(ed).push(entity.title);                              // несколько в клетку
+    if (!entity.event) continue;
+    const ev = entity.event;
+    if (!ev.start) continue;
+
+    let day, time;
+
+    if (ev.allDay === true) {
+      // allDay: дата-строка "2025-08-04", БЕЗ зоны, парсим числами (как Ш3)
+      const [ey, em, ed] = ev.start.split("-").map(Number);
+      if (ey !== year || em - 1 !== month) continue;
+      day = ed;
+      time = null;                                    // без времени
+    } else {
+      // timed: "2026-08-04T05:00:00Z" — С зоной Z, new Date конвертит в локаль
+      const dt = new Date(ev.start);
+      // ЛОКАЛЬНЫЕ год/месяц/день (не UTC!) — событие могло сменить день при конвертации
+      if (dt.getFullYear() !== year || dt.getMonth() !== month) continue;
+      day = dt.getDate();                             // локальный день клетки
+      time = dt.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+    }
+
+    if (!byDay.has(day)) byDay.set(day, []);
+    byDay.get(day).push({ time, title: entity.title });
   }
   return byDay;
 }
@@ -279,7 +293,7 @@ function renderCalendar() {
   let firstDay = new Date(year, month, 1).getDay();             // 0=вс
   firstDay = (firstDay === 0) ? 6 : firstDay - 1;               // теперь 0=пн..6=вс
 
-  const eventsByDay = collectAllDayEvents(currentBundle, year, month);
+  const eventsByDay = collectEvents(currentBundle, year, month);
 
   // пустые клетки в начале
   for (let i = 0; i < firstDay; i++) {
@@ -306,7 +320,15 @@ function renderCalendar() {
       for (const title of events) {
         const ev = document.createElement("div");
         ev.className = "cal-event";
-        ev.textContent = title;
+        const events = eventsByDay.get(day);
+        if (events) {
+          for (const item of events) {                    // item = {time, title}
+            const evEl = document.createElement("div");
+            evEl.className = "cal-event";
+            evEl.textContent = item.time ? `${item.time} ${item.title}` : item.title;
+            cell.appendChild(evEl);
+          }
+        }
         cell.appendChild(ev);
       }
     }
