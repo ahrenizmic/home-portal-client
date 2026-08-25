@@ -25,6 +25,24 @@
         .task-due { font-size: 12px; color: #c0392b; font-weight: bold; }
         .task-text { margin: 4px 0; }
         .task-project { font-size: 12px; color: #888; }
+        #cal-title { font-size: 18px; margin: 8px 0 16px; text-transform: capitalize; }
+        #cal-weekdays {
+          display: grid; grid-template-columns: repeat(7, 1fr);
+          gap: 4px; margin-bottom: 4px;
+        }
+        #cal-weekdays div {
+          text-align: center; font-size: 12px; color: #888; font-weight: bold;
+        }
+        #cal-grid {
+          display: grid; grid-template-columns: repeat(7, 1fr);
+          gap: 4px;
+        }
+        .cal-cell {
+          min-height: 60px; border: 1px solid #ddd; border-radius: 6px;
+          padding: 4px; font-size: 14px;
+        }
+        .cal-cell.empty { border: none; }
+        .cal-cell.today { border: 2px solid #2980b9; background: #eaf3fb; }
     </style>
 </head>
 <body>
@@ -47,7 +65,9 @@
 
     <!-- экран календаря (по умолчанию скрыт, пока заглушка) -->
     <div id="screen-calendar" class="screen" style="display: none;">
-        <p>Здесь будет календарь 📅</p>
+        <h2 id="cal-title"></h2>
+        <div id="cal-weekdays"></div>
+        <div id="cal-grid"></div>
     </div>
 </div>
 <script type="module" src="app.js"></script>

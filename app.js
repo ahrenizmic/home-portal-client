@@ -67,6 +67,7 @@ function setupTabs() {
     screenCalendar.style.display = "block";
     tabCalendar.classList.add("active");
     tabTasks.classList.remove("active");
+    renderCalendar();
   });
 }
 
@@ -220,6 +221,53 @@ function renderGroup(container, title, tasks, cls, showDate) {
     projEl.textContent = t.project;
     div.append(textEl, projEl);                  // дата уже добавлена выше (если была)
     container.appendChild(div);
+  }
+}
+
+function renderCalendar() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();               // 0-11
+  const todayDate = now.getDate();            // число сегодня
+
+  // заголовок "Август 2026"
+  const title = now.toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
+  document.getElementById("cal-title").textContent = title;
+
+  // дни недели (понедельник первый)
+  const weekdaysEl = document.getElementById("cal-weekdays");
+  weekdaysEl.innerHTML = "";
+  const weekdayNames = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+  for (const name of weekdayNames) {
+    const d = document.createElement("div");
+    d.textContent = name;
+    weekdaysEl.appendChild(d);
+  }
+
+  // сетка чисел
+  const grid = document.getElementById("cal-grid");
+  grid.innerHTML = "";
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();   // 28-31
+  // день недели 1-го числа, сдвиг на пн-первый:
+  // getDay(): 0=вс..6=сб → нам нужно 0=пн..6=вс
+  let firstDay = new Date(year, month, 1).getDay();             // 0=вс
+  firstDay = (firstDay === 0) ? 6 : firstDay - 1;               // теперь 0=пн..6=вс
+
+  // пустые клетки в начале
+  for (let i = 0; i < firstDay; i++) {
+    const cell = document.createElement("div");
+    cell.className = "cal-cell empty";
+    grid.appendChild(cell);
+  }
+
+  // клетки с числами
+  for (let day = 1; day <= daysInMonth; day++) {
+    const cell = document.createElement("div");
+    cell.className = "cal-cell";
+    if (day === todayDate) cell.classList.add("today");          // подсветка сегодня
+    cell.textContent = day;
+    grid.appendChild(cell);
   }
 }
 
