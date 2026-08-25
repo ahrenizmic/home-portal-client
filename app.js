@@ -231,7 +231,8 @@ function renderCalendar() {
   const todayDate = now.getDate();            // число сегодня
 
   // заголовок "Август 2026"
-  const title = now.toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
+  const monthName = now.toLocaleDateString("ru-RU", { month: "long" });   // "август"
+  const title = `${monthName} ${year}`;                                    // "август 2026"
   document.getElementById("cal-title").textContent = title;
 
   // дни недели (понедельник первый)
