@@ -40,6 +40,7 @@
         .cal-cell {
           min-height: 60px; border: 1px solid #ddd; border-radius: 6px;
           padding: 4px; font-size: 14px;
+          min-width: 0;
         }
         .cal-cell.empty { border: none; }
         .cal-cell.today { border: 2px solid #2980b9; background: #eaf3fb; }
@@ -47,7 +48,8 @@
         .cal-event {
           font-size: 11px; background: #2980b9; color: white;
           border-radius: 3px; padding: 1px 4px; margin-top: 2px;
-          overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+          overflow-wrap: break-word;        /* длинное слово переносится, не вылезает */
+          word-break: break-word;           /* страховка для очень длинных слов */
         }
     </style>
 </head>
