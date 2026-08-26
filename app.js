@@ -130,17 +130,11 @@ function collectEvents(bundle, year, month) {
   const byDay = new Map();
   if (!bundle) return byDay;
 
-  console.log("СОБЫТИЙ В ДАННЫХ:",
-    bundle.entities.filter(e => e.type === "event").length);   // ← зонд 1
-
   for (const entity of bundle.entities) {
     if (entity.type !== "event") continue;
     if (!entity.event) continue;
     const ev = entity.event;
     if (!ev.start) continue;
-
-    console.log("ОБРАБАТЫВАЮ СОБЫТИЕ:", entity.title,
-      "allDay=", ev.allDay, "start=", ev.start);               // ← зонд 2
 
     let day, time;
 
@@ -160,10 +154,8 @@ function collectEvents(bundle, year, month) {
     }
 
     if (!byDay.has(day)) byDay.set(day, []);
-    console.log("  → кладу в день", day, "time=", time, "title=", entity.title); // ← зонд 3
     byDay.get(day).push({ time, title: entity.title });
   }
-  console.log("ИТОГО МАП:", byDay);                            // ← зонд 4
   return byDay;
 }
 
@@ -325,19 +317,11 @@ function renderCalendar() {
     // события этого дня (если есть)
     const events = eventsByDay.get(day);
     if (events) {
-      for (const title of events) {
-        const ev = document.createElement("div");
-        ev.className = "cal-event";
-        const events = eventsByDay.get(day);
-        if (events) {
-          for (const item of events) {                    // item = {time, title}
-            const evEl = document.createElement("div");
-            evEl.className = "cal-event";
-            evEl.textContent = item.time ? `${item.time} ${item.title}` : item.title;
-            cell.appendChild(evEl);
-          }
-        }
-        cell.appendChild(ev);
+      for (const item of events) {                    // item = {time, title}
+        const evEl = document.createElement("div");
+        evEl.className = "cal-event";
+        evEl.textContent = item.time ? `${item.time} ${item.title}` : item.title;
+        cell.appendChild(evEl);
       }
     }
 
