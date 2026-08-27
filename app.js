@@ -136,6 +136,39 @@ function collectEvents(bundle, year, month) {
     const ev = entity.event;
     if (!ev.start) continue;
 
+    // ── ВЕТКА ПОВТОРЕНИЙ ──
+    if (ev.recurrence) {
+      // построить правило: строка recurrence + dtstart из start
+      const options = RRule.parseString(ev.recurrence);
+      if (ev.allDay === true) {
+        const [ey, em, ed] = ev.start.split("-").map(Number);
+        options.dtstart = new Date(Date.UTC(ey, em - 1, ed));   // allDay: полночь UTC
+      } else {
+        options.dtstart = new Date(ev.start);                    // timed: момент с Z
+      }
+      const rule = new RRule(options);
+
+      // окно месяца (пока UTC-границы; тонкость стыка месяцев — отдельно)
+      const winStart = new Date(Date.UTC(year, month, 1));
+      const winEnd = new Date(Date.UTC(year, month + 1, 1));     // between не включит верх
+      const dates = rule.between(winStart, winEnd);
+
+      for (const d of dates) {
+        let day, time;
+        if (ev.allDay === true) {
+          day = d.getUTCDate();                       // Правило allDay: UTC-день
+          time = null;
+        } else {
+          day = d.getDate();                          // Правило timed: локальный день
+          time = d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+        }
+        if (!byDay.has(day)) byDay.set(day, []);
+        byDay.get(day).push({ time, title: entity.title });
+      }
+      continue;                                       // ← повторение обработано, дальше
+    }
+    // ── КОНЕЦ ВЕТКИ ПОВТОРЕНИЙ ──
+
     let day, time;
 
     if (ev.allDay === true) {
