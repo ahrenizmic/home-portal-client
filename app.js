@@ -369,6 +369,8 @@ async function loadAndShow(password) {
       const bundleText = await decryptPacked(dataBuffer, key);
       bundle = JSON.parse(bundleText);
       currentBundle = bundle;            // ← сохранить для календаря
+      console.log("ЗАМЕР ЦЕЛИКОМ:",
+        JSON.stringify(bundle.entities.find(e => e.title === "Замер давления"), null, 2));
     } catch (e) {
       // Ловушка №2: кэш подвёл (битый) → откат в сеть
       dataBuffer = await (await fetch(`${DATA_BASE}/data`)).arrayBuffer();
@@ -379,6 +381,8 @@ async function loadAndShow(password) {
     }
 
     currentBundle = bundle;            // ← сохранить для календаря
+    console.log("ЗАМЕР ЦЕЛИКОМ:",
+      JSON.stringify(bundle.entities.find(e => e.title === "Замер давления"), null, 2));
     const tasks = collectDueTasks(bundle, TODAY);
     status.textContent = `Задач на сегодня и просроченных: ${tasks.length}`;
     renderTasks(tasks);
