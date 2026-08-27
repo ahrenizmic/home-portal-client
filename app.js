@@ -185,6 +185,21 @@ function collectEvents(bundle, year, month) {
     if (!byDay.has(day)) byDay.set(day, []);
     byDay.get(day).push({ time, title: entity.title });
   }
+  // упорядочить события внутри каждого дня:
+  // allDay (time === null) — сверху, затем timed по возрастанию времени
+  for (const events of byDay.values()) {
+    events.sort((a, b) => {
+      // оба allDay — сохраняем как есть (по title для стабильности)
+      if (a.time === null && b.time === null) {
+        return a.title.localeCompare(b.title, "ru");
+      }
+      if (a.time === null) return -1;    // a=allDay выше любого timed
+      if (b.time === null) return 1;     // b=allDay выше a
+      // оба timed — по строке времени "HH:MM" (лексикографически = хронологически)
+      return a.time.localeCompare(b.time);
+    });
+  }
+
   return byDay;
 }
 
