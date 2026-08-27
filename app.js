@@ -138,34 +138,30 @@ function collectEvents(bundle, year, month) {
 
     // ── ВЕТКА ПОВТОРЕНИЙ ──
     if (ev.recurrence) {
-      // построить правило: строка recurrence + dtstart из start
-      const options = RRule.parseString(ev.recurrence);
+      const options = window.rrule.RRule.parseString(ev.recurrence);   // ← window.rrule.RRule
       if (ev.allDay === true) {
         const [ey, em, ed] = ev.start.split("-").map(Number);
-        options.dtstart = new Date(Date.UTC(ey, em - 1, ed));   // allDay: полночь UTC
+        options.dtstart = new Date(Date.UTC(ey, em - 1, ed));
       } else {
-        options.dtstart = new Date(ev.start);                    // timed: момент с Z
+        options.dtstart = new Date(ev.start);
       }
-      const rule = new RRule(options);
-
-      // окно месяца (пока UTC-границы; тонкость стыка месяцев — отдельно)
+      const rule = new window.rrule.RRule(options);                    // ← window.rrule.RRule
       const winStart = new Date(Date.UTC(year, month, 1));
-      const winEnd = new Date(Date.UTC(year, month + 1, 1));     // between не включит верх
+      const winEnd = new Date(Date.UTC(year, month + 1, 1));
       const dates = rule.between(winStart, winEnd);
-
       for (const d of dates) {
         let day, time;
         if (ev.allDay === true) {
-          day = d.getUTCDate();                       // Правило allDay: UTC-день
+          day = d.getUTCDate();
           time = null;
         } else {
-          day = d.getDate();                          // Правило timed: локальный день
+          day = d.getDate();
           time = d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
         }
         if (!byDay.has(day)) byDay.set(day, []);
         byDay.get(day).push({ time, title: entity.title });
       }
-      continue;                                       // ← повторение обработано, дальше
+      continue;
     }
     // ── КОНЕЦ ВЕТКИ ПОВТОРЕНИЙ ──
 
