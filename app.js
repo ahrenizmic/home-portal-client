@@ -146,9 +146,9 @@ function collectEvents(bundle, year, month) {
         options.dtstart = new Date(ev.start);
       }
       const rule = new window.rrule.RRule(options);                    // ← window.rrule.RRule
-      const winStart = new Date(Date.UTC(year, month, 1));
-      const winEnd = new Date(Date.UTC(year, month + 1, 1));
-      const dates = rule.between(winStart, winEnd);
+      const winStart = new Date(Date.UTC(year, month, 1, 0, 0, 0));           // 1-е 00:00:00
+      const winEnd = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999)); // последний день месяца 23:59:59
+      const dates = rule.between(winStart, winEnd, true);                      // inc=true
       for (const d of dates) {
         let day, time;
         if (ev.allDay === true) {
